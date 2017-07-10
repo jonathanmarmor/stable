@@ -41,10 +41,10 @@ def checker_track(output_filename, gap=1.0, repeat_count=5):
 
 def phase():
     track_filenames = []
-    for i in range(1, 15):
+    for i in range(1, 4):
         track_filename = TMP_FOLDER + 'track-{}.wav'.format(i)
         track_filenames.append(track_filename)
-        checker_track(track_filename, gap=.01 * i, repeat_count=300)
+        checker_track(track_filename, gap=.01 * i, repeat_count=4)
 
     cbn = sox.Combiner()
     cbn.build(track_filenames, 'output.wav', 'mix-power')
