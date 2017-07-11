@@ -3,85 +3,86 @@
 import sox
 
 
-TMP_FOLDER = 'tmp/'
-ORIGINAL_SAMPLE = 'master_sample.wav'
-SAMPLE_FULL_DURATION = sox.file_info.duration(ORIGINAL_SAMPLE)
-PHRASE_DURATION = 4.207
-START_PAD_DURATION = 0.910
-END_PAD_DURATION = 0.116
+class Sample(object):
+    def __init__(self, file_name='master_sample.wav'):
+        self.file_name = file_name
+        self.full_duration = sox.file_info.duration(file_name)
+        self.phrase_duration = 4.207
+        self.start_pad_duration = 0.910
+        self.end_pad_duration = 0.116
 
 
-def make_track(output_filename, gap, repeat_count, has_initial_rest=False):
-    rest_duration = SAMPLE_FULL_DURATION + gap - START_PAD_DURATION - END_PAD_DURATION
-    tfm = sox.Transformer()
-    tfm.pad(end_duration=rest_duration)
-    if repeat_count > 0:
-        tfm.repeat(count=repeat_count)
-    if has_initial_rest:
-        tfm.pad(start_duration=rest_duration + ((SAMPLE_FULL_DURATION - rest_duration) / 2.0))
-    tfm.build(ORIGINAL_SAMPLE, output_filename)
+class Phase(object):
+    def __init__(self, sample_file_name='master_sample.wav', output_file_name='output.wav'):
+        self.sample = Sample(sample_file_name)
+        self.output_file_name = output_file_name
+        self.temp_folder = 'tmp/'
 
+    def make_track(self, output_file_name, gap, repeat_count, has_initial_rest=False, mute_first=False):
+        rest_duration = self.sample.full_duration + gap - self.sample.start_pad_duration - self.sample.end_pad_duration
 
-def checker_track(output_filename, gap=1.0, repeat_count=5):
-    """Repeat the sample on alternating tracks so the fade in and out can overlap"""
-    track_a_file = TMP_FOLDER + 'track-a.wav'
-    track_b_file = TMP_FOLDER + 'track-b.wav'
+        if mute_first:
+            repeat_count -= 1
 
-    half, remainder = divmod(repeat_count, 2)
-    track_a_repeat_count = half + remainder - 1
-    track_b_repeat_count = half - 1
-    make_track(track_a_file, gap, track_a_repeat_count)
-    make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
+        tfm = sox.Transformer()
+        tfm.pad(end_duration=rest_duration)
+        if repeat_count > 0:
+            tfm.repeat(count=repeat_count)
+        if has_initial_rest:
+            tfm.pad(start_duration=rest_duration + ((self.sample.full_duration - rest_duration) / 2.0))
+        if mute_first:
+            tfm.pad(start_duration=self.sample.full_duration + rest_duration)
+        tfm.build(self.sample.file_name, output_file_name)
 
-    cbn = sox.Combiner()
-    # cbn.silence(location=1)
-    # cbn.silence(location=-1)
-    cbn.build([track_a_file, track_b_file], output_filename, 'mix-power')
+    def checker_track(self, output_file_name, gap=1.0, repeat_count=5, mute_first=False):
+        """Repeat the sample on alternating tracks so the fade in and out can overlap"""
+        track_a_file = self.temp_folder + 'track-a.wav'
+        track_b_file = self.temp_folder + 'track-b.wav'
 
+        half, remainder = divmod(repeat_count, 2)
+        track_a_repeat_count = half + remainder - 1
+        track_b_repeat_count = half - 1
+        self.make_track(track_a_file, gap, track_a_repeat_count, mute_first=mute_first)
+        self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
 
-def phase():
-    track_filenames = []
-    for i in range(1, 4):
-        track_filename = TMP_FOLDER + 'track-{}.wav'.format(i)
-        track_filenames.append(track_filename)
-        checker_track(track_filename, gap=.01 * i, repeat_count=4)
+        cbn = sox.Combiner()
+        cbn.silence(location=-1)
+        cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    cbn = sox.Combiner()
-    cbn.build(track_filenames, 'output.wav', 'mix-power')
+    def go(self, n_tracks, gap, repeat_count):
+        track_file_names = []
+        for i in range(1, n_tracks):
+            track_file_name = self.temp_folder + 'track-{}.wav'.format(i)
+            track_file_names.append(track_file_name)
+            mute_first = False
+            if i is not 1:
+                mute_first = True
+            self.checker_track(track_file_name, gap=gap * i, repeat_count=repeat_count, mute_first=mute_first)
 
-
-# def simple_phase(n_tracks=10):
-#     n_tracks = int(n_tracks)
-
-#     track_filenames = []
-#     trim_amount = 0.830
-#     trim_change = (trim_amount - .02) / n_tracks
-#     for i in range(n_tracks):
-#         tfm = sox.Transformer()
-#         tfm.trim(trim_amount, SAMPLE_FULL_DURATION)
-#         tfm.fade(fade_in_len=0.01)
-#         trimmed_file = TMP_FOLDER + 'trimmed-{}.wav'.format(i)
-#         tfm.build(ORIGINAL_SAMPLE, trimmed_file)
-
-#         cbn = sox.Combiner()
-#         track_filename = TMP_FOLDER + 'output-{}.wav'.format(i)
-#         track_filenames.append(track_filename)
-#         cbn.build([trimmed_file] * n_tracks, track_filename, 'concatenate')
-
-#         trim_amount -= trim_change
-
-#     cbn = sox.Combiner()
-#     cbn.build(track_filenames, 'output.wav', 'mix-power')
+        cbn = sox.Combiner()
+        cbn.build(track_file_names, self.output_file_name, 'mix-power')
 
 
 if __name__ == '__main__':
-    # import argparse
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     '-n',
-    #     '--n-tracks',
-    #     help='how many tracks to generate')
-    # args = parser.parse_args()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-n',
+        '--n-tracks',
+        help='how many tracks to generate',
+        type=int)
+    parser.add_argument(
+        '-g',
+        '--gap',
+        help='the smallest gap between phrases',
+        type=float)
+    parser.add_argument(
+        '-r',
+        '--repeat-count',
+        help='the number of times the phrase should repeat',
+        type=int)
 
-    # simple_phase(args.n_tracks)
-    phase()
+    args = parser.parse_args()
+
+    phase = Phase()
+    phase.go(args.n_tracks, args.gap, args.repeat_count)
