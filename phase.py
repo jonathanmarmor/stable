@@ -49,7 +49,7 @@ class Phase(object):
         cbn.silence(location=-1)
         cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    def go(self, n_tracks, gap, repeat_count):
+    def go(self, n_tracks=10, gap=.03, repeat_count=20):
         track_file_names = []
         for i in range(1, n_tracks):
             track_file_name = self.temp_folder + 'track-{}.wav'.format(i)
@@ -70,17 +70,20 @@ if __name__ == '__main__':
         '-n',
         '--n-tracks',
         help='how many tracks to generate',
-        type=int)
+        type=int,
+        default=10)
     parser.add_argument(
         '-g',
         '--gap',
         help='the smallest gap between phrases',
-        type=float)
+        type=float,
+        default=.03)
     parser.add_argument(
         '-r',
         '--repeat-count',
         help='the number of times the phrase should repeat',
-        type=int)
+        type=int,
+        default=20)
 
     args = parser.parse_args()
 
