@@ -61,10 +61,11 @@ class Phase(object):
             self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
 
         cbn = sox.Combiner()
-        # cbn.silence(location=-1)
         cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    def go(self, n_tracks=9, gap=.03, repeat_count=20, end_align=False):
+    def phase(self, output_file_name=None, n_tracks=9, gap=.03, repeat_count=20, end_align=False):
+        if output_file_name == None:
+            output_file_name = self.output_file_name
         track_file_names = []
         for i in range(1, n_tracks + 1):
             track_file_name = self.temp_folder + 'track-{}.wav'.format(i)
@@ -99,38 +100,54 @@ class Phase(object):
             track_file_names = new_track_file_names
 
         cbn = sox.Combiner()
-        cbn.build(track_file_names, self.output_file_name, 'mix-power')
+        cbn.silence(location=1)
+        cbn.silence(location=-1)
+        cbn.build(track_file_names, output_file_name, 'mix-power')
+
+    def arch(self):
+        track_a_file = self.temp_folder + 'arch-track-a.wav'
+        track_b_file = self.temp_folder + 'arch-track-b.wav'
+
+        self.phase(output_file_name=track_a_file, n_tracks=9, gap=0.03, repeat_count=172)
+        self.phase(output_file_name=track_b_file, n_tracks=12, gap=0.012, repeat_count=20, end_align=True)
+
+        cbn = sox.Combiner()
+        cbn.build([track_a_file, track_b_file], self.output_file_name, 'concatenate')
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-n',
-        '--n-tracks',
-        help='how many tracks to generate',
-        type=int,
-        default=9)
-    parser.add_argument(
-        '-g',
-        '--gap',
-        help='the smallest gap between phrases',
-        type=float,
-        default=.03)
-    parser.add_argument(
-        '-r',
-        '--repeat-count',
-        help='the number of times the phrase should repeat',
-        type=int,
-        default=20)
-    parser.add_argument(
-        '-e',
-        '--end-align',
-        help='come together in the end, rather than starting out together',
-        action='store_true',
-        default=False)
+    # import argparse
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     '-n',
+    #     '--n-tracks',
+    #     help='how many tracks to generate',
+    #     type=int,
+    #     default=9)
+    # parser.add_argument(
+    #     '-g',
+    #     '--gap',
+    #     help='the smallest gap between phrases',
+    #     type=float,
+    #     default=.03)
+    # parser.add_argument(
+    #     '-r',
+    #     '--repeat-count',
+    #     help='the number of times the phrase should repeat',
+    #     type=int,
+    #     default=20)
+    # parser.add_argument(
+    #     '-e',
+    #     '--end-align',
+    #     help='come together in the end, rather than starting out together',
+    #     action='store_true',
+    #     default=False)
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+
+    # phase = Phase()
+    # phase.phase(n_tracks=args.n_tracks, gap=args.gap, repeat_count=args.repeat_count, end_align=args.end_align)
 
     phase = Phase()
-    phase.go(args.n_tracks, args.gap, args.repeat_count, args.end_align)
+    phase.arch()
+
