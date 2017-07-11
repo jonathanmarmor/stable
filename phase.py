@@ -49,9 +49,9 @@ class Phase(object):
         cbn.silence(location=-1)
         cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    def go(self, n_tracks=10, gap=.03, repeat_count=20):
+    def go(self, n_tracks=9, gap=.03, repeat_count=20):
         track_file_names = []
-        for i in range(1, n_tracks):
+        for i in range(1, n_tracks + 1):
             track_file_name = self.temp_folder + 'track-{}.wav'.format(i)
             track_file_names.append(track_file_name)
             mute_first = False
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         '--n-tracks',
         help='how many tracks to generate',
         type=int,
-        default=10)
+        default=9)
     parser.add_argument(
         '-g',
         '--gap',
