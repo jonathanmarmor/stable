@@ -46,18 +46,42 @@ class Phase(object):
         self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
 
         cbn = sox.Combiner()
-        cbn.silence(location=-1)
+        # cbn.silence(location=-1)
         cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    def go(self, n_tracks=9, gap=.03, repeat_count=20):
+    def go(self, n_tracks=9, gap=.03, repeat_count=20, end_align=False):
         track_file_names = []
         for i in range(1, n_tracks + 1):
             track_file_name = self.temp_folder + 'track-{}.wav'.format(i)
             track_file_names.append(track_file_name)
+
             mute_first = False
-            if i is not 1:
+            if not end_align i is not 1:
                 mute_first = True
-            self.checker_track(track_file_name, gap=gap * i, repeat_count=repeat_count, mute_first=mute_first)
+
+            mute_last = False
+            if end_align and i is not n_tracks:
+                mute_last = True
+
+            self.checker_track(
+                track_file_name,
+                gap=gap * i,
+                repeat_count=repeat_count,
+                mute_first=mute_first,
+                mute_last=mute_last)
+
+        if end_align:
+            track_durations = [sox.file_info.duration(f) for f in track_file_names]
+            longest_track_duration = max(track_durations)
+            track_duration_diffs = [longest_track_duration - d for d in track_durations]
+            new_track_file_names = []
+            for i, diff, track_file_name in zip(range(1, n_tracks + 1), track_duration_diffs, track_file_names):
+                new_track_file_name = track_file_name[:-4] + '-start-offset.wav'
+                new_track_file_names.append(new_track_file_name)
+                tfm = sox.Transformer()
+                tfm.pad(start_duration=diff + (gap * i))
+                tfm.build(track_file_name, new_track_file_name)
+            track_file_names = new_track_file_names
 
         cbn = sox.Combiner()
         cbn.build(track_file_names, self.output_file_name, 'mix-power')
@@ -84,8 +108,14 @@ if __name__ == '__main__':
         help='the number of times the phrase should repeat',
         type=int,
         default=20)
+    parser.add_argument(
+        '-e',
+        '--end-align',
+        help='come together in the end, rather than starting out together',
+        action='store_true',
+        default=False)
 
     args = parser.parse_args()
 
     phase = Phase()
-    phase.go(args.n_tracks, args.gap, args.repeat_count)
+    phase.go(args.n_tracks, args.gap, args.repeat_count, args.end_align)
