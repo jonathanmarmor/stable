@@ -18,10 +18,10 @@ class Phase(object):
         self.output_file_name = output_file_name
         self.temp_folder = 'tmp/'
 
-    def make_track(self, output_file_name, gap, repeat_count, has_initial_rest=False, mute_first=False):
+    def make_track(self, output_file_name, gap, repeat_count, has_initial_rest=False, mute_first=False, mute_last=False):
         rest_duration = self.sample.full_duration + gap - self.sample.start_pad_duration - self.sample.end_pad_duration
 
-        if mute_first:
+        if mute_first or mute_last:
             repeat_count -= 1
 
         tfm = sox.Transformer()
@@ -32,9 +32,12 @@ class Phase(object):
             tfm.pad(start_duration=rest_duration + ((self.sample.full_duration - rest_duration) / 2.0))
         if mute_first:
             tfm.pad(start_duration=self.sample.full_duration + rest_duration)
+        if mute_last:
+            tfm.pad(end_duration=self.sample.full_duration + rest_duration)
+
         tfm.build(self.sample.file_name, output_file_name)
 
-    def checker_track(self, output_file_name, gap=1.0, repeat_count=5, mute_first=False):
+    def checker_track(self, output_file_name, gap=1.0, repeat_count=5, mute_first=False, mute_last=False):
         """Repeat the sample on alternating tracks so the fade in and out can overlap"""
         track_a_file = self.temp_folder + 'track-a.wav'
         track_b_file = self.temp_folder + 'track-b.wav'
@@ -42,8 +45,20 @@ class Phase(object):
         half, remainder = divmod(repeat_count, 2)
         track_a_repeat_count = half + remainder - 1
         track_b_repeat_count = half - 1
-        self.make_track(track_a_file, gap, track_a_repeat_count, mute_first=mute_first)
-        self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
+
+        if mute_last:
+            if remainder:
+                # there are an odd number of repeats, so the muted last repetition is in track A
+                self.make_track(track_a_file, gap, track_a_repeat_count, mute_last=mute_last)
+                self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
+            else:
+                # there are an even number of repeats, so the muted last repetition is in track B
+                self.make_track(track_a_file, gap, track_a_repeat_count)
+                self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True, mute_last=mute_last)
+
+        else:
+            self.make_track(track_a_file, gap, track_a_repeat_count, mute_first=mute_first)
+            self.make_track(track_b_file, gap, track_b_repeat_count, has_initial_rest=True)
 
         cbn = sox.Combiner()
         # cbn.silence(location=-1)
@@ -56,7 +71,7 @@ class Phase(object):
             track_file_names.append(track_file_name)
 
             mute_first = False
-            if not end_align i is not 1:
+            if not end_align and i is not 1:
                 mute_first = True
 
             mute_last = False
