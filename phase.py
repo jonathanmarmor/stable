@@ -4,21 +4,36 @@ import sox
 
 
 class Sample(object):
-    def __init__(self, file_name='master_sample.wav'):
+    def __init__(self,
+            file_name='master_sample.wav',
+            start_pad_duration=0,
+            end_pad_duration=0):
         self.file_name = file_name
         self.full_duration = sox.file_info.duration(file_name)
-        self.phrase_duration = 4.207
-        self.start_pad_duration = 0.910
-        self.end_pad_duration = 0.116
+        self.start_pad_duration = start_pad_duration
+        self.end_pad_duration = end_pad_duration
 
 
 class Phase(object):
-    def __init__(self, sample_file_name='master_sample.wav', output_file_name='output.wav'):
-        self.sample = Sample(sample_file_name)
+    def __init__(self,
+            sample_file_name='master_sample.wav',
+            output_file_name='output.wav',
+            start_pad_duration=0,
+            end_pad_duration=0):
+        self.sample = Sample(
+            sample_file_name,
+            start_pad_duration=0,
+            end_pad_duration=0)
         self.output_file_name = output_file_name
         self.temp_folder = 'tmp/'
 
-    def make_track(self, output_file_name, gap, repeat_count, has_initial_rest=False, mute_first=False, mute_last=False):
+    def make_track(self,
+            output_file_name,
+            gap,
+            repeat_count,
+            has_initial_rest=False,
+            mute_first=False,
+            mute_last=False):
         rest_duration = self.sample.full_duration + gap - self.sample.start_pad_duration - self.sample.end_pad_duration
 
         if mute_first or mute_last:
@@ -37,7 +52,12 @@ class Phase(object):
 
         tfm.build(self.sample.file_name, output_file_name)
 
-    def checker_track(self, output_file_name, gap=1.0, repeat_count=5, mute_first=False, mute_last=False):
+    def checker_track(self,
+            output_file_name,
+            gap=1.0,
+            repeat_count=5,
+            mute_first=False,
+            mute_last=False):
         """Repeat the sample on alternating tracks so the fade in and out can overlap"""
         track_a_file = self.temp_folder + 'track-a.wav'
         track_b_file = self.temp_folder + 'track-b.wav'
@@ -63,7 +83,12 @@ class Phase(object):
         cbn = sox.Combiner()
         cbn.build([track_a_file, track_b_file], output_file_name, 'mix-power')
 
-    def phase(self, output_file_name=None, n_tracks=9, gap=.03, repeat_count=20, end_align=False):
+    def phase(self,
+            output_file_name=None,
+            n_tracks=9,
+            gap=.03,
+            repeat_count=20,
+            end_align=False):
         if output_file_name == None:
             output_file_name = self.output_file_name
         track_file_names = []
@@ -148,6 +173,10 @@ if __name__ == '__main__':
     # phase = Phase()
     # phase.phase(n_tracks=args.n_tracks, gap=args.gap, repeat_count=args.repeat_count, end_align=args.end_align)
 
-    phase = Phase()
+    phase = Phase(
+        sample_file_name='master_sample.wav',
+        output_file_name='output.wav',
+        start_pad_duration=0.910,
+        end_pad_duration=0.116)
     phase.arch()
 
