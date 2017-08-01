@@ -22,8 +22,8 @@ class Phase(object):
             end_pad_duration=0):
         self.sample = Sample(
             sample_file_name,
-            start_pad_duration=0,
-            end_pad_duration=0)
+            start_pad_duration=start_pad_duration,
+            end_pad_duration=end_pad_duration)
         self.output_file_name = output_file_name
         self.temp_folder = 'tmp/'
 
@@ -125,8 +125,8 @@ class Phase(object):
             track_file_names = new_track_file_names
 
         cbn = sox.Combiner()
-        cbn.silence(location=1)
-        cbn.silence(location=-1)
+        cbn.silence(location=1)  # Remove silence from the beginning
+        cbn.silence(location=-1)  # Remove silence from the end
         cbn.build(track_file_names, output_file_name, 'mix-power')
 
     def arch(self):
@@ -179,4 +179,8 @@ if __name__ == '__main__':
         start_pad_duration=0.910,
         end_pad_duration=0.116)
     phase.arch()
-
+    # phase.phase(
+    #     n_tracks=22,
+    #     gap=.03,
+    #     repeat_count=5,
+    #     end_align=True)
