@@ -20,6 +20,8 @@ class Phase(object):
             output_file_name='output.wav',
             start_pad_duration=0,
             end_pad_duration=0):
+
+        self.sox = sox
         self.sample = Sample(
             sample_file_name,
             start_pad_duration=start_pad_duration,
@@ -34,6 +36,7 @@ class Phase(object):
             has_initial_rest=False,
             mute_first=False,
             mute_last=False):
+
         rest_duration = self.sample.full_duration + gap - self.sample.start_pad_duration - self.sample.end_pad_duration
 
         if mute_first or mute_last:
@@ -58,7 +61,9 @@ class Phase(object):
             repeat_count=5,
             mute_first=False,
             mute_last=False):
+
         """Repeat the sample on alternating tracks so the fade in and out can overlap"""
+
         track_a_file = self.temp_folder + 'track-a.wav'
         track_b_file = self.temp_folder + 'track-b.wav'
 
@@ -89,6 +94,7 @@ class Phase(object):
             gap=.03,
             repeat_count=20,
             end_align=False):
+
         if output_file_name == None:
             output_file_name = self.output_file_name
         track_file_names = []
@@ -129,58 +135,41 @@ class Phase(object):
         cbn.silence(location=-1)  # Remove silence from the end
         cbn.build(track_file_names, output_file_name, 'mix-power')
 
-    def arch(self):
-        track_a_file = self.temp_folder + 'arch-track-a.wav'
-        track_b_file = self.temp_folder + 'arch-track-b.wav'
-
-        self.phase(output_file_name=track_a_file, n_tracks=9, gap=0.03, repeat_count=172)
-        self.phase(output_file_name=track_b_file, n_tracks=12, gap=0.012, repeat_count=20, end_align=True)
-
-        cbn = sox.Combiner()
-        cbn.build([track_a_file, track_b_file], self.output_file_name, 'concatenate')
-
 
 if __name__ == '__main__':
-    # import argparse
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     '-n',
-    #     '--n-tracks',
-    #     help='how many tracks to generate',
-    #     type=int,
-    #     default=9)
-    # parser.add_argument(
-    #     '-g',
-    #     '--gap',
-    #     help='the smallest gap between phrases',
-    #     type=float,
-    #     default=.03)
-    # parser.add_argument(
-    #     '-r',
-    #     '--repeat-count',
-    #     help='the number of times the phrase should repeat',
-    #     type=int,
-    #     default=20)
-    # parser.add_argument(
-    #     '-e',
-    #     '--end-align',
-    #     help='come together in the end, rather than starting out together',
-    #     action='store_true',
-    #     default=False)
+    import argparse
 
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-n',
+        '--n-tracks',
+        help='how many tracks to generate',
+        type=int,
+        default=9)
+    parser.add_argument(
+        '-g',
+        '--gap',
+        help='the smallest gap between phrases',
+        type=float,
+        default=.03)
+    parser.add_argument(
+        '-r',
+        '--repeat-count',
+        help='the number of times the phrase should repeat',
+        type=int,
+        default=20)
+    parser.add_argument(
+        '-e',
+        '--end-align',
+        help='come together in the end, rather than starting out together',
+        action='store_true',
+        default=False)
 
-    # phase = Phase()
-    # phase.phase(n_tracks=args.n_tracks, gap=args.gap, repeat_count=args.repeat_count, end_align=args.end_align)
+    args = parser.parse_args()
 
-    phase = Phase(
-        sample_file_name='master_sample.wav',
-        output_file_name='output.wav',
-        start_pad_duration=0.910,
-        end_pad_duration=0.116)
-    phase.arch()
-    # phase.phase(
-    #     n_tracks=22,
-    #     gap=.03,
-    #     repeat_count=5,
-    #     end_align=True)
+    phaser = Phase()
+    phaser.phase(
+        n_tracks=args.n_tracks,
+        gap=args.gap,
+        repeat_count=args.repeat_count,
+        end_align=args.end_align)
